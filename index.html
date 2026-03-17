@@ -54,7 +54,7 @@
                 <input type="text" id="master_txid" oninput="generateTable()" value="BCA-RE-270226-01">
             </div>
             <div class="config-item">
-                <label>Effective Date (MM/DD/YYYY):</label>
+                <label>Effective Date (DD/MM/YYYY):</label>
                 <input type="text" id="custom_date" oninput="generateTable()">
             </div>
             <div class="config-item" id="transferTypeContainer" style="display:none;">
@@ -132,7 +132,11 @@
 
     window.onload = function() {
         const now = new Date();
-        document.getElementById('custom_date').value = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`;
+        // Berubah menjadi format DD/MM/YYYY
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        document.getElementById('custom_date').value = `${day}/${month}/${year}`;
     };
 
     function switchMode(mode) {
