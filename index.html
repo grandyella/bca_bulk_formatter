@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>BCA Bulk Tools Pro - Ahmad Zulfikar T</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root { --bca-blue: #005696; --nonbca-red: #c0392b; --active-color: #005696; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 20px; background-color: #f0f4f7; transition: 0.3s; }
@@ -12,11 +13,18 @@
         .tab-btn.active[data-mode="BCA"] { background: var(--bca-blue); color: white; }
         .tab-btn.active[data-mode="NONBCA"] { background: var(--nonbca-red); color: white; }
         h2 { color: var(--active-color); border-bottom: 2px solid var(--active-color); padding-bottom: 10px; margin-bottom: 20px; }
-        .header-config { background: #f8fbff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid var(--active-color); display: flex; justify-content: space-between; align-items: flex-end;}
-        .config-row { display: flex; gap: 15px; align-items: center; }
+        .header-config { background: #f8fbff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid var(--active-color); display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 15px;}
+        .config-row { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
         .config-item { display: flex; flex-direction: column; }
         .config-item label { font-weight: bold; font-size: 11px; color: var(--active-color); margin-bottom: 4px; }
         .config-item input, .config-item select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; }
+        
+        /* Style baru untuk Upload Area */
+        .upload-section { border: 2px dashed #ccc; padding: 10px; border-radius: 8px; background: #fff; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s; }
+        .upload-section:hover { border-color: var(--active-color); background: #f0f7ff; }
+        .upload-section input { display: none; }
+        .upload-label { font-size: 12px; font-weight: bold; color: #555; }
+
         .summary-badge { background: var(--active-color); color: white; padding: 10px 20px; border-radius: 8px; text-align: right; min-width: 220px; }
         .summary-badge small { display: block; font-size: 11px; opacity: 0.8; }
         .summary-badge span { font-size: 20px; font-weight: bold; }
@@ -64,6 +72,10 @@
                     <option value="LLG">LLG</option>
                     <option value="RTGS">RTGS</option>
                 </select>
+            </div>
+            <div class="upload-section" onclick="document.getElementById('excel_file').click()">
+                <span class="upload-label">📁 Upload Excel/CSV</span>
+                <input type="file" id="excel_file" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event)">
             </div>
         </div>
         <div class="summary-badge">
@@ -132,12 +144,52 @@
 
     window.onload = function() {
         const now = new Date();
-        // Berubah menjadi format DD/MM/YYYY
         const day = String(now.getDate()).padStart(2, '0');
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const year = now.getFullYear();
         document.getElementById('custom_date').value = `${day}/${month}/${year}`;
     };
+
+    // Fungsi Baru: Handle Upload Excel
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+
+            // Reset textareas
+            const fields = { name: [], rek: [], amt: [], remark: [], bank: [], email: [] };
+
+            // Start from row 1 (skip header)
+            for(let i = 1; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                if(row.length === 0) continue;
+                
+                fields.name.push(row[0] || "");
+                fields.rek.push(row[1] || "");
+                fields.amt.push(row[2] || "");
+                fields.remark.push(row[3] || "");
+                if (currentMode === 'NONBCA') fields.bank.push(row[4] || "");
+                fields.email.push(row[5] || "");
+            }
+
+            document.getElementById('in_name').value = fields.name.join('\n');
+            document.getElementById('in_rek').value = fields.rek.join('\n');
+            document.getElementById('in_amt').value = fields.amt.join('\n');
+            document.getElementById('in_remark').value = fields.remark.join('\n');
+            if (currentMode === 'NONBCA') document.getElementById('in_bank_name').value = fields.bank.join('\n');
+            document.getElementById('in_email').value = fields.email.join('\n');
+
+            generateTable();
+            event.target.value = ''; // clear input
+        };
+        reader.readAsArrayBuffer(file);
+    }
 
     function switchMode(mode) {
         currentMode = mode;
@@ -197,7 +249,7 @@
             if (!names[i] && !reks[i]) continue;
             validCount++;
             const currentTxId = `${prefix}${String(startNum + (validCount - 1)).padStart(2, '0')}`;
-            const numAmt = parseFloat(amts[i] ? amts[i].replace(/[^0-9]/g, '') : "0") || 0;
+            const numAmt = parseFloat(amts[i] ? amts[i].toString().replace(/[^0-9]/g, '') : "0") || 0;
             totalAmount += numAmt;
 
             const fullRemark = (remarks[i] || "").trim();
