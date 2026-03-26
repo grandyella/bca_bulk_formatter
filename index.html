@@ -10,35 +10,41 @@
         .container { max-width: 100%; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
         .tab-btn { padding: 10px 25px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; background: #ddd; color: #666; }
-        .tab-btn.active[data-mode="BCA"] { background: var(--bca-blue); color: white; }
-        .tab-btn.active[data-mode="NONBCA"] { background: var(--nonbca-red); color: white; }
+        .tab-btn.active { background: var(--active-color); color: white; }
         h2 { color: var(--active-color); border-bottom: 2px solid var(--active-color); padding-bottom: 10px; }
         .header-config { background: #f8fbff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid var(--active-color); display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 15px;}
         .config-row { display: flex; gap: 15px; align-items: center; }
         .config-item { display: flex; flex-direction: column; }
         .config-item label { font-weight: bold; font-size: 11px; color: var(--active-color); margin-bottom: 4px; }
         .config-item input, .config-item select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; }
-        .upload-section { border: 2px dashed #ccc; padding: 10px; border-radius: 8px; background: #fff; cursor: pointer; }
+        
+        .upload-btn { background: #563d7c; color: white; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; border: none; }
         .summary-badge { background: var(--active-color); color: white; padding: 10px 20px; border-radius: 8px; text-align: right; min-width: 220px; }
         .summary-badge span { font-size: 20px; font-weight: bold; display: block; }
+
+        .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        label { font-weight: bold; font-size: 10px; margin-bottom: 4px; color: #444; background: #eee; padding: 4px 8px; border-radius: 4px; }
+        textarea { height: 80px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 11px; resize: none; }
+        
         .actions { margin-top: 20px; display: flex; gap: 12px; align-items: center; border-top: 1px solid #eee; padding-top: 20px; }
         button.main-btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
         .btn-copy { background: #28a745; }
         .btn-reset { background: #dc3545; }
-        .table-wrapper { margin-top: 20px; overflow-x: auto; max-height: 500px; border: 1px solid #ddd; }
+        
+        .table-wrapper { margin-top: 20px; overflow-x: auto; max-height: 450px; border: 1px solid #ddd; }
         table { width: 100%; border-collapse: collapse; font-size: 10px; white-space: nowrap; }
         th { background: var(--active-color); color: white; padding: 10px; position: sticky; top: 0; }
         td { border: 1px solid #eee; padding: 8px; }
         tr:nth-child(even) { background: #fafafa; }
-        footer { margin-top: 30px; text-align: center; font-size: 13px; color: #7f8c8d; }
+        footer { margin-top: 30px; text-align: center; font-size: 12px; color: #7f8c8d; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="tabs">
-        <button class="tab-btn active" data-mode="BCA" onclick="switchMode('BCA')">SESAMA BCA</button>
-        <button class="tab-btn" data-mode="NONBCA" onclick="switchMode('NONBCA')">ANTAR BANK (NON-BCA)</button>
+        <button class="tab-btn active" id="btnBca" onclick="switchMode('BCA')">SESAMA BCA</button>
+        <button class="tab-btn" id="btnNonBca" onclick="switchMode('NONBCA')">ANTAR BANK (NON-BCA)</button>
     </div>
 
     <h2 id="modeTitle">BCA Bulk Formatter - Sesama BCA</h2>
@@ -47,23 +53,24 @@
         <div class="config-row">
             <div class="config-item">
                 <label>Master Transaction ID:</label>
-                <input type="text" id="master_txid" value="BCA-RE-270226-01">
+                <input type="text" id="master_txid" oninput="processManualData()" value="BCA-RE-270226-01">
             </div>
             <div class="config-item">
                 <label>Effective Date (DD/MM/YYYY):</label>
-                <input type="text" id="custom_date">
+                <input type="text" id="custom_date" oninput="processManualData()">
             </div>
             <div class="config-item" id="transferTypeContainer" style="display:none;">
                 <label>Method:</label>
-                <select id="def_type">
+                <select id="def_type" onchange="processManualData()">
                     <option value="BIF">BI-FAST</option>
                     <option value="LLG">LLG</option>
                     <option value="RTGS">RTGS</option>
                 </select>
             </div>
-            <div class="upload-section" onclick="document.getElementById('excel_file').click()">
-                <span style="font-size: 12px; font-weight: bold;">📁 UPLOAD EXCEL</span>
-                <input type="file" id="excel_file" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event)">
+            <div class="config-item">
+                <label>Upload File:</label>
+                <button class="upload-btn" onclick="document.getElementById('excel_file').click()">📁 PILIH EXCEL / CSV</button>
+                <input type="file" id="excel_file" style="display:none" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event)">
             </div>
         </div>
         <div class="summary-badge">
@@ -72,14 +79,33 @@
         </div>
     </div>
 
+    <div class="input-grid">
+        <div class="input-group">
+            <label>1. Receiver Name</label>
+            <textarea id="in_name" oninput="processManualData()" placeholder="Copas Nama..."></textarea>
+        </div>
+        <div class="input-group">
+            <label>2. Account (Rekening)</label>
+            <textarea id="in_rek" oninput="processManualData()" placeholder="Copas No Rek..."></textarea>
+        </div>
+        <div class="input-group">
+            <label>3. Amount</label>
+            <textarea id="in_amt" oninput="processManualData()" placeholder="Copas Nominal..."></textarea>
+        </div>
+        <div class="input-group">
+            <label>4. Remark (Manual Only)</label>
+            <textarea id="in_remark" oninput="processManualData()" placeholder="Copas Invoice..."></textarea>
+        </div>
+    </div>
+
     <div class="actions">
         <button class="main-btn btn-copy" onclick="copyDataOnly()">SALIN DATA TABEL</button>
-        <button class="main-btn btn-reset" onclick="resetAll()">RESET</button>
+        <button class="main-btn btn-reset" onclick="resetAll()">RESET SEMUA</button>
         <div id="status" style="font-weight:bold; color:var(--active-color)">0 Transaksi Terdeteksi</div>
     </div>
 
     <div class="table-wrapper">
-        <table>
+        <table id="bcaTable">
             <thead>
                 <tr>
                     <th>No</th><th>Transaction ID</th><th>Transfer Type</th><th>Debited Acc.</th><th>Beneficiary ID</th><th>Credited Acc.</th><th>Amount</th><th>Eff. Date</th><th>Transaction Purpose</th><th>Currency</th><th>Charges Type</th><th>Charges Acc.</th><th>Remark 1</th><th>Remark 2</th><th>Receiver Bank Cd</th><th>Receiver Bank Name</th><th>Receiver Name</th><th>Receiver Cust. Type</th><th>Receiver Cust. Residen</th><th>Transaction Cd</th><th>Beneficiary Email</th>
@@ -100,18 +126,20 @@
         const d = String(now.getDate()).padStart(2, '0');
         const m = String(now.getMonth() + 1).padStart(2, '0');
         const y = now.getFullYear();
-        document.getElementById('custom_date').value = `${d}/${m}/${year = y}`;
+        document.getElementById('custom_date').value = `${d}/${m}/${y}`;
     };
 
     function switchMode(mode) {
         currentMode = mode;
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+        document.getElementById('btnBca').classList.toggle('active', mode === 'BCA');
+        document.getElementById('btnNonBca').classList.toggle('active', mode === 'NONBCA');
         document.getElementById('modeTitle').innerText = mode === 'BCA' ? "BCA Bulk Formatter - Sesama BCA" : "BCA Bulk Formatter - Antar Bank";
         document.getElementById('transferTypeContainer').style.display = mode === 'BCA' ? 'none' : 'block';
         document.documentElement.style.setProperty('--active-color', mode === 'BCA' ? '#005696' : '#c0392b');
+        processManualData();
     }
 
+    // HANDLER UPLOAD EXCEL
     function handleFileUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -120,34 +148,59 @@
         reader.onload = function(e) {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, {type: 'array'});
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
+            const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
 
-            // LOGIKA MAPPING BERDASARKAN FILE ANDA
-            const rows = [];
-            // Mulai dari baris ke-9 (index 8) karena baris 1-7 adalah header informasi batch
+            const uploadRows = [];
+            // Start from row 9 (index 8) based on your Payment Batch file
             for(let i = 8; i < jsonData.length; i++) {
                 const row = jsonData[i];
-                if(!row || !row[1]) continue; // Skip jika Invoice Code kosong
+                if(!row || !row[1]) continue; 
 
-                // Extract No Rekening dari kolom D (index 3) "PT. BANK CENTRAL ASIA - 2872507664 - Muhammad Roni"
-                const destBankString = row[3] || "";
-                const accNo = destBankString.replace(/[^0-9]/g, ''); // Ambil hanya angka
+                // Ambil angka saja dari kolom Destination Bank (Kolom D)
+                const accNo = (row[3] || "").toString().replace(/[^0-9]/g, '');
 
-                rows.push({
-                    remark: row[1] || "",    // Kolom B (Invoice Code)
-                    name: row[2] || "",      // Kolom C (Vendor Name)
-                    rek: accNo,              // Angka dari Kolom D
-                    amt: row[4] || 0         // Kolom E (Total Amount)
+                uploadRows.push({
+                    name: (row[2] || "").toString(),
+                    rek: accNo,
+                    amt: row[4] || 0,
+                    rem1: "", 
+                    rem2: (row[1] || "").toString() // Invoice masuk otomatis ke Remark 2
                 });
             }
-            renderTable(rows);
+            // Kosongkan manual input saat upload dilakukan
+            document.querySelectorAll('textarea').forEach(t => t.value = "");
+            renderTable(uploadRows);
             event.target.value = '';
         };
         reader.readAsArrayBuffer(file);
     }
 
-    function renderTable(data) {
+    // HANDLER MANUAL INPUT
+    function processManualData() {
+        const names = document.getElementById('in_name').value.split('\n');
+        const reks = document.getElementById('in_rek').value.split('\n');
+        const amts = document.getElementById('in_amt').value.split('\n');
+        const remarks = document.getElementById('in_remark').value.split('\n');
+        
+        const manualRows = [];
+        const max = Math.max(names.length, reks.length, amts.length);
+        
+        for(let i=0; i<max; i++) {
+            if(!names[i] && !reks[i]) continue;
+            const fullRem = (remarks[i] || "").trim();
+            manualRows.push({
+                name: names[i] || "",
+                rek: (reks[i] || "").trim(),
+                amt: amts[i] || 0,
+                rem1: fullRem.substring(0, 18),
+                rem2: fullRem.substring(18, 36)
+            });
+        }
+        renderTable(manualRows);
+    }
+
+    // FUNGSI RENDER TABEL UTAMA
+    function renderTable(dataArray) {
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = "";
         
@@ -163,26 +216,25 @@
         }
 
         let total = 0;
-        data.forEach((item, index) => {
+        dataArray.forEach((item, index) => {
             const cleanAmt = Math.floor(parseFloat(item.amt.toString().replace(/[^0-9.]/g, '')) || 0);
             total += cleanAmt;
             const txId = `${prefix}${String(startNum + index).padStart(2, '0')}`;
-            const rem = item.remark.toString();
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${index + 1}</td><td>${txId}</td><td>${type}</td>
                 <td>5995333390</td><td></td><td>${item.rek}</td>
                 <td>${cleanAmt}</td><td>${effDate}</td><td></td><td>IDR</td><td>OUR</td>
-                <td>5995333390</td><td>${rem.substring(0, 18)}</td><td>${rem.substring(18, 36)}</td>
-                <td></td><td></td><td>${item.name.toUpperCase()}</td>
+                <td>5995333390</td>
+                <td>${item.rem1}</td> <td>${item.rem2}</td> <td></td><td></td><td>${item.name.toUpperCase()}</td>
                 <td></td><td></td><td></td><td></td>
             `;
             tbody.appendChild(tr);
         });
 
         document.getElementById('grandTotalDisplay').innerText = "IDR " + total.toLocaleString('id-ID');
-        document.getElementById('status').innerText = `${data.length} Transaksi Terdeteksi`;
+        document.getElementById('status').innerText = `${dataArray.length} Transaksi Terdeteksi`;
     }
 
     function copyDataOnly() {
@@ -198,7 +250,7 @@
     }
 
     function resetAll() {
-        if(confirm("Reset data?")) location.reload();
+        if(confirm("Hapus semua data?")) location.reload();
     }
 </script>
 </body>
