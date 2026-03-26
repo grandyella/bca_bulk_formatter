@@ -13,29 +13,32 @@
         .tab-btn.active[data-mode="BCA"] { background: var(--bca-blue); color: white; }
         .tab-btn.active[data-mode="NONBCA"] { background: var(--nonbca-red); color: white; }
         h2 { color: var(--active-color); border-bottom: 2px solid var(--active-color); padding-bottom: 10px; margin-bottom: 20px; }
+        
         .header-config { background: #f8fbff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid var(--active-color); display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 15px;}
         .config-row { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
         .config-item { display: flex; flex-direction: column; }
         .config-item label { font-weight: bold; font-size: 11px; color: var(--active-color); margin-bottom: 4px; }
         .config-item input, .config-item select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; }
         
-        .upload-section { border: 2px dashed #ccc; padding: 10px; border-radius: 8px; background: #fff; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s; }
-        .upload-section:hover { border-color: var(--active-color); background: #f0f7ff; }
-        .upload-section input { display: none; }
-        .upload-label { font-size: 12px; font-weight: bold; color: #555; }
+        /* Upload Button Style */
+        .upload-btn { background: #6c757d; color: white; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; border: none; transition: 0.2s; }
+        .upload-btn:hover { background: #495057; }
 
         .summary-badge { background: var(--active-color); color: white; padding: 10px 20px; border-radius: 8px; text-align: right; min-width: 220px; }
         .summary-badge small { display: block; font-size: 11px; opacity: 0.8; }
         .summary-badge span { font-size: 20px; font-weight: bold; }
+
         .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
         .input-group { display: flex; flex-direction: column; }
         .input-group.hidden { display: none; }
         label { font-weight: bold; font-size: 10px; margin-bottom: 4px; color: #444; background: #eee; padding: 4px 8px; border-radius: 4px; }
         textarea { height: 100px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 11px; resize: none; }
+        
         .actions { margin-top: 20px; display: flex; gap: 12px; align-items: center; border-top: 1px solid #eee; padding-top: 20px; }
         button.main-btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; color: white; }
         .btn-copy { background: #28a745; }
         .btn-reset { background: #dc3545; }
+
         .table-wrapper { margin-top: 20px; overflow-x: auto; max-height: 400px; border: 1px solid #ddd; }
         table { width: 100%; border-collapse: collapse; font-size: 10px; white-space: nowrap; }
         th { background: var(--active-color); color: white; padding: 10px; text-align: left; position: sticky; top: 0; z-index: 10; }
@@ -72,9 +75,10 @@
                     <option value="RTGS">RTGS</option>
                 </select>
             </div>
-            <div class="upload-section" onclick="document.getElementById('excel_file').click()">
-                <span class="upload-label">📁 Upload Excel / CSV</span>
-                <input type="file" id="excel_file" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event)">
+            <div class="config-item">
+                <label>Import Data:</label>
+                <button class="upload-btn" onclick="document.getElementById('excel_file').click()">📁 UPLOAD EXCEL/CSV</button>
+                <input type="file" id="excel_file" accept=".xlsx, .xls, .csv" style="display:none" onchange="handleFileUpload(event)">
             </div>
         </div>
         <div class="summary-badge">
@@ -85,27 +89,27 @@
 
     <div class="input-grid">
         <div class="input-group">
-            <label>1. Receiver Name</label>
+            <label>1. Receiver Name (Col B)</label>
             <textarea id="in_name" oninput="generateTable()"></textarea>
         </div>
         <div class="input-group non-bca-field hidden">
-            <label>2. Receiver Bank Name</label>
-            <textarea id="in_bank_name" oninput="generateTable()" placeholder="e.g. Mandiri, BRI, BNI"></textarea>
+            <label>2. Receiver Bank Name (Col E)</label>
+            <textarea id="in_bank_name" oninput="generateTable()" placeholder="e.g. Mandiri, BRI"></textarea>
         </div>
         <div class="input-group">
-            <label id="rekLabel">2. Account (Rekening)</label>
+            <label>3. Account Number (Col C)</label>
             <textarea id="in_rek" oninput="generateTable()"></textarea>
         </div>
         <div class="input-group">
-            <label id="amtLabel">3. Amount</label>
+            <label>4. Total Amount (Col D)</label>
             <textarea id="in_amt" oninput="generateTable()"></textarea>
         </div>
         <div class="input-group">
-            <label id="remarkLabel">4. Remark (Invoice Code)</label>
+            <label>5. Invoice Code / Remark (Col A)</label>
             <textarea id="in_remark" oninput="generateTable()"></textarea>
         </div>
         <div class="input-group">
-            <label>5. Beneficiary Email</label>
+            <label>6. Beneficiary Email (Col F)</label>
             <textarea id="in_email" oninput="generateTable()"></textarea>
         </div>
     </div>
@@ -162,23 +166,18 @@
 
             const fields = { name: [], rek: [], amt: [], remark: [], bank: [], email: [] };
 
+            // Start i=1 untuk skip Header Excel
             for(let i = 1; i < jsonData.length; i++) {
                 const row = jsonData[i];
                 if(!row || row.length === 0) continue;
                 
-                // MAPPING SESUAI INSTRUKSI:
-                // Col A (0) -> Invoice Code (Remark)
-                // Col B (1) -> Nama Penerima
-                // Col C (2) -> Nomor Rekening
-                // Col D (3) -> Total Amount
-                // Col E (4) -> Nama Bank (Khusus Non-BCA)
-                
-                fields.remark.push(row[0] || "");
-                fields.name.push(row[1] || "");
-                fields.rek.push(row[2] || "");
-                fields.amt.push(row[3] || "");
-                fields.bank.push(row[4] || "");
-                fields.email.push(row[5] || "");
+                // MAPPING SESUAI REQUEST:
+                fields.remark.push(row[0] || ""); // Col A: Invoice Code
+                fields.name.push(row[1] || "");   // Col B: Destination Bank Name
+                fields.rek.push(row[2] || "");    // Col C: Account Number
+                fields.amt.push(row[3] || "");    // Col D: Total Amount
+                fields.bank.push(row[4] || "");   // Col E: Bank Name (Manual input if needed)
+                fields.email.push(row[5] || "");  // Col F: Email
             }
 
             document.getElementById('in_name').value = fields.name.join('\n');
@@ -190,7 +189,7 @@
 
             generateTable();
             event.target.value = ''; 
-            alert("Berhasil! Data Excel telah dipetakan ke kolom yang sesuai.");
+            alert("Berhasil! Data telah di-mapping sesuai kolom Excel Anda.");
         };
         reader.readAsArrayBuffer(file);
     }
@@ -218,7 +217,7 @@
 
     function detectSwiftCode(bankName) {
         if (!bankName) return "";
-        const cleanName = bankName.toString().toUpperCase().trim();
+        const cleanName = bankName.toUpperCase().trim();
         for (let key in SWIFT_CODES) {
             if (cleanName.includes(key)) return SWIFT_CODES[key];
         }
@@ -244,7 +243,7 @@
             prefix = parts.join('-') + '-';
         }
 
-        const maxRows = Math.max(names.length, reks.length, amts.length);
+        const maxRows = Math.max(names.length, reks.length, amts.length, remarks.length);
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = "";
         let totalAmount = 0; let validCount = 0;
@@ -253,7 +252,8 @@
             if (!names[i] && !reks[i]) continue;
             validCount++;
             const currentTxId = `${prefix}${String(startNum + (validCount - 1)).padStart(2, '0')}`;
-            const numAmt = parseFloat(amts[i] ? amts[i].toString().replace(/[^0-9]/g, '') : "0") || 0;
+            const rawAmt = amts[i] ? amts[i].toString().replace(/[^0-9]/g, '') : "0";
+            const numAmt = parseFloat(rawAmt) || 0;
             totalAmount += numAmt;
 
             const fullRemark = (remarks[i] || "").trim();
@@ -284,12 +284,12 @@
         window.getSelection().removeAllRanges();
         window.getSelection().addRange(range);
         document.execCommand('copy');
-        alert("Data berhasil disalin! Silakan tempel (Paste) ke Excel BCA Anda.");
+        alert("Data berhasil disalin!");
         window.getSelection().removeAllRanges();
     }
 
     function resetAll() {
-        if(confirm("Hapus semua data input?")) {
+        if(confirm("Hapus semua data?")) {
             ['in_name','in_rek','in_amt','in_remark','in_bank_name','in_email'].forEach(id => document.getElementById(id).value = "");
             generateTable();
         }
