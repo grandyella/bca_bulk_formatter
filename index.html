@@ -6,45 +6,31 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root { --bca-blue: #005696; --nonbca-red: #c0392b; --active-color: #005696; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 20px; background-color: #f0f4f7; transition: 0.3s; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 20px; background-color: #f0f4f7; }
         .container { max-width: 100%; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .tab-btn { padding: 10px 25px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; background: #ddd; color: #666; transition: 0.3s; }
+        .tab-btn { padding: 10px 25px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; background: #ddd; color: #666; }
         .tab-btn.active[data-mode="BCA"] { background: var(--bca-blue); color: white; }
         .tab-btn.active[data-mode="NONBCA"] { background: var(--nonbca-red); color: white; }
-        h2 { color: var(--active-color); border-bottom: 2px solid var(--active-color); padding-bottom: 10px; margin-bottom: 20px; }
+        h2 { color: var(--active-color); border-bottom: 2px solid var(--active-color); padding-bottom: 10px; }
         .header-config { background: #f8fbff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid var(--active-color); display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 15px;}
-        .config-row { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        .config-row { display: flex; gap: 15px; align-items: center; }
         .config-item { display: flex; flex-direction: column; }
         .config-item label { font-weight: bold; font-size: 11px; color: var(--active-color); margin-bottom: 4px; }
         .config-item input, .config-item select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; }
-        
-        .upload-section { border: 2px dashed #ccc; padding: 10px; border-radius: 8px; background: #fff; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s; }
-        .upload-section:hover { border-color: var(--active-color); background: #f0f7ff; }
-        .upload-section input { display: none; }
-        .upload-label { font-size: 12px; font-weight: bold; color: #555; }
-
+        .upload-section { border: 2px dashed #ccc; padding: 10px; border-radius: 8px; background: #fff; cursor: pointer; }
         .summary-badge { background: var(--active-color); color: white; padding: 10px 20px; border-radius: 8px; text-align: right; min-width: 220px; }
-        .summary-badge small { display: block; font-size: 11px; opacity: 0.8; }
-        .summary-badge span { font-size: 20px; font-weight: bold; }
-
-        /* Sembunyikan Input Area Jika Ingin Fokus di Upload */
-        .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
-        .input-group { display: flex; flex-direction: column; }
-        label { font-weight: bold; font-size: 10px; margin-bottom: 4px; color: #444; background: #eee; padding: 4px 8px; border-radius: 4px; }
-        textarea { height: 60px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 11px; resize: none; background: #fafafa; }
-        
+        .summary-badge span { font-size: 20px; font-weight: bold; display: block; }
         .actions { margin-top: 20px; display: flex; gap: 12px; align-items: center; border-top: 1px solid #eee; padding-top: 20px; }
-        button.main-btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; color: white; }
+        button.main-btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
         .btn-copy { background: #28a745; }
         .btn-reset { background: #dc3545; }
-        
         .table-wrapper { margin-top: 20px; overflow-x: auto; max-height: 500px; border: 1px solid #ddd; }
         table { width: 100%; border-collapse: collapse; font-size: 10px; white-space: nowrap; }
-        th { background: var(--active-color); color: white; padding: 10px; text-align: left; position: sticky; top: 0; z-index: 10; }
+        th { background: var(--active-color); color: white; padding: 10px; position: sticky; top: 0; }
         td { border: 1px solid #eee; padding: 8px; }
         tr:nth-child(even) { background: #fafafa; }
-        footer { margin-top: 30px; text-align: center; font-size: 13px; color: #7f8c8d; border-top: 1px solid #eee; padding-top: 15px; }
+        footer { margin-top: 30px; text-align: center; font-size: 13px; color: #7f8c8d; }
     </style>
 </head>
 <body>
@@ -61,22 +47,22 @@
         <div class="config-row">
             <div class="config-item">
                 <label>Master Transaction ID:</label>
-                <input type="text" id="master_txid" oninput="processManualData()" value="BCA-RE-270226-01">
+                <input type="text" id="master_txid" value="BCA-RE-270226-01">
             </div>
             <div class="config-item">
                 <label>Effective Date (DD/MM/YYYY):</label>
-                <input type="text" id="custom_date" oninput="processManualData()">
+                <input type="text" id="custom_date">
             </div>
             <div class="config-item" id="transferTypeContainer" style="display:none;">
                 <label>Method:</label>
-                <select id="def_type" onchange="processManualData()">
+                <select id="def_type">
                     <option value="BIF">BI-FAST</option>
                     <option value="LLG">LLG</option>
                     <option value="RTGS">RTGS</option>
                 </select>
             </div>
             <div class="upload-section" onclick="document.getElementById('excel_file').click()">
-                <span class="upload-label">📁 UPLOAD EXCEL (Direct to Table)</span>
+                <span style="font-size: 12px; font-weight: bold;">📁 UPLOAD EXCEL</span>
                 <input type="file" id="excel_file" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event)">
             </div>
         </div>
@@ -86,29 +72,14 @@
         </div>
     </div>
 
-    <div class="input-grid">
-        <div class="input-group">
-            <label>Manual Receiver Name</label>
-            <textarea id="in_name" oninput="processManualData()"></textarea>
-        </div>
-        <div class="input-group">
-            <label>Manual Account</label>
-            <textarea id="in_rek" oninput="processManualData()"></textarea>
-        </div>
-        <div class="input-group">
-            <label>Manual Amount</label>
-            <textarea id="in_amt" oninput="processManualData()"></textarea>
-        </div>
-    </div>
-
     <div class="actions">
         <button class="main-btn btn-copy" onclick="copyDataOnly()">SALIN DATA TABEL</button>
-        <button class="main-btn btn-reset" onclick="resetAll()">RESET SEMUA</button>
+        <button class="main-btn btn-reset" onclick="resetAll()">RESET</button>
         <div id="status" style="font-weight:bold; color:var(--active-color)">0 Transaksi Terdeteksi</div>
     </div>
 
     <div class="table-wrapper">
-        <table id="bcaTable">
+        <table>
             <thead>
                 <tr>
                     <th>No</th><th>Transaction ID</th><th>Transfer Type</th><th>Debited Acc.</th><th>Beneficiary ID</th><th>Credited Acc.</th><th>Amount</th><th>Eff. Date</th><th>Transaction Purpose</th><th>Currency</th><th>Charges Type</th><th>Charges Acc.</th><th>Remark 1</th><th>Remark 2</th><th>Receiver Bank Cd</th><th>Receiver Bank Name</th><th>Receiver Name</th><th>Receiver Cust. Type</th><th>Receiver Cust. Residen</th><th>Transaction Cd</th><th>Beneficiary Email</th>
@@ -122,25 +93,25 @@
 </div>
 
 <script>
-    const SWIFT_CODES = {
-        "MANDIRI": "BMRIIDJA", "BRI": "BRINIDJA", "BNI": "BNINIDJA", "BCA": "CENAIDJA",
-        "CIMB": "CIMBIDJA", "DANAMON": "BDNIIDJA", "PERMATA": "BAPPIDJA", "MAYBANK": "IBBKIDJA",
-        "PANIN": "PANIIDJA", "OCBC": "OCBCIDJA", "BTPN": "BTPNIDJA", "BTN": "BBTNIDJA",
-        "DBS": "DBSSIDJA", "UOB": "UOVBIDJA", "MEGA": "MEGAIDJA", "MUAMALAT": "BBMIIDJA",
-        "BSI": "BSINIDJA", "SYARIAH INDONESIA": "BSINIDJA", "HSBC": "HSBCIDJA"
-    };
-
     let currentMode = 'BCA';
 
     window.onload = function() {
         const now = new Date();
-        const day = String(now.getDate()).padStart(2, '0');
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const year = now.getFullYear();
-        document.getElementById('custom_date').value = `${day}/${month}/${year}`;
+        const d = String(now.getDate()).padStart(2, '0');
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const y = now.getFullYear();
+        document.getElementById('custom_date').value = `${d}/${m}/${year = y}`;
     };
 
-    // FUNGSI UTAMA UPLOAD: Langsung ke Tabel tanpa isi Textarea
+    function switchMode(mode) {
+        currentMode = mode;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+        document.getElementById('modeTitle').innerText = mode === 'BCA' ? "BCA Bulk Formatter - Sesama BCA" : "BCA Bulk Formatter - Antar Bank";
+        document.getElementById('transferTypeContainer').style.display = mode === 'BCA' ? 'none' : 'block';
+        document.documentElement.style.setProperty('--active-color', mode === 'BCA' ? '#005696' : '#c0392b');
+    }
+
     function handleFileUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -152,64 +123,37 @@
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
 
-            const uploadData = [];
-
-            // Mapping: A:Invoice(0), B:Name(1), C:Rek(2), D:Amt(3), E:Bank(4), F:Email(5)
-            for(let i = 1; i < jsonData.length; i++) {
+            // LOGIKA MAPPING BERDASARKAN FILE ANDA
+            const rows = [];
+            // Mulai dari baris ke-9 (index 8) karena baris 1-7 adalah header informasi batch
+            for(let i = 8; i < jsonData.length; i++) {
                 const row = jsonData[i];
-                if(!row || row.length < 2) continue;
-                
-                uploadData.push({
-                    remark: row[0] || "",
-                    name: row[1] || "",
-                    rek: row[2] || "",
-                    amt: row[3] || "",
-                    bank: row[4] || "",
-                    email: row[5] || ""
+                if(!row || !row[1]) continue; // Skip jika Invoice Code kosong
+
+                // Extract No Rekening dari kolom D (index 3) "PT. BANK CENTRAL ASIA - 2872507664 - Muhammad Roni"
+                const destBankString = row[3] || "";
+                const accNo = destBankString.replace(/[^0-9]/g, ''); // Ambil hanya angka
+
+                rows.push({
+                    remark: row[1] || "",    // Kolom B (Invoice Code)
+                    name: row[2] || "",      // Kolom C (Vendor Name)
+                    rek: accNo,              // Angka dari Kolom D
+                    amt: row[4] || 0         // Kolom E (Total Amount)
                 });
             }
-
-            // Kosongkan textarea manual agar tidak double
-            document.querySelectorAll('textarea').forEach(t => t.value = "");
-            
-            // Render Tabel dari Data Upload
-            renderTable(uploadData);
-            
-            event.target.value = ''; 
-            alert("File di-upload! Tabel langsung terisi.");
+            renderTable(rows);
+            event.target.value = '';
         };
         reader.readAsArrayBuffer(file);
     }
 
-    // Fungsi untuk memproses data dari pengetikan manual (jika textarea diisi)
-    function processManualData() {
-        const names = document.getElementById('in_name').value.split('\n');
-        const reks = document.getElementById('in_rek').value.split('\n');
-        const amts = document.getElementById('in_amt').value.split('\n');
-        
-        const manualData = [];
-        const maxRows = Math.max(names.length, reks.length, amts.length);
-        
-        for(let i=0; i<maxRows; i++) {
-            if(!names[i] && !reks[i]) continue;
-            manualData.push({
-                name: names[i] || "",
-                rek: reks[i] || "",
-                amt: amts[i] || "",
-                remark: "", bank: "", email: ""
-            });
-        }
-        renderTable(manualData);
-    }
-
-    // FUNGSI RENDER TABEL (Pusat Logika)
-    function renderTable(dataArray) {
+    function renderTable(data) {
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = "";
         
         const masterId = document.getElementById('master_txid').value.trim();
         const effDate = document.getElementById('custom_date').value.trim();
-        const defType = currentMode === 'BCA' ? 'BCA' : document.getElementById('def_type').value;
+        const type = currentMode === 'BCA' ? 'BCA' : document.getElementById('def_type').value;
         
         let prefix = "TX-"; let startNum = 1;
         if (masterId.includes('-')) {
@@ -218,63 +162,27 @@
             prefix = parts.join('-') + '-';
         }
 
-        let totalAmount = 0;
-        dataArray.forEach((item, index) => {
-            const currentTxId = `${prefix}${String(startNum + index).padStart(2, '0')}`;
-            const numAmt = parseFloat(item.amt.toString().replace(/[^0-9]/g, '')) || 0;
-            totalAmount += numAmt;
-
-            const fullRemark = (item.remark || "").toString().trim();
-            const bankNameInput = (item.bank || "").toString().trim();
-            const autoSwift = currentMode === 'BCA' ? "" : detectSwiftCode(bankNameInput);
+        let total = 0;
+        data.forEach((item, index) => {
+            const cleanAmt = Math.floor(parseFloat(item.amt.toString().replace(/[^0-9.]/g, '')) || 0);
+            total += cleanAmt;
+            const txId = `${prefix}${String(startNum + index).padStart(2, '0')}`;
+            const rem = item.remark.toString();
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${index + 1}</td>
-                <td>${currentTxId}</td>
-                <td>${defType}</td>
-                <td>5995333390</td> <td></td>              <td>${item.rek}</td>   <td>${numAmt}</td>     <td>${effDate}</td>    <td></td>              <td>IDR</td>
-                <td>OUR</td>
-                <td>5995333390</td>
-                <td>${fullRemark.substring(0, 18)}</td> <td>${fullRemark.substring(18)}</td>    <td>${autoSwift}</td>
-                <td>${bankNameInput.toUpperCase()}</td>
-                <td>${item.name.toUpperCase()}</td>
-                <td></td><td></td><td></td>
-                <td>${item.email || ""}</td>
+                <td>${index + 1}</td><td>${txId}</td><td>${type}</td>
+                <td>5995333390</td><td></td><td>${item.rek}</td>
+                <td>${cleanAmt}</td><td>${effDate}</td><td></td><td>IDR</td><td>OUR</td>
+                <td>5995333390</td><td>${rem.substring(0, 18)}</td><td>${rem.substring(18, 36)}</td>
+                <td></td><td></td><td>${item.name.toUpperCase()}</td>
+                <td></td><td></td><td></td><td></td>
             `;
             tbody.appendChild(tr);
         });
 
-        document.getElementById('grandTotalDisplay').innerText = "IDR " + totalAmount.toLocaleString('id-ID');
-        document.getElementById('status').innerText = `${dataArray.length} Transaksi Terdeteksi`;
-    }
-
-    function detectSwiftCode(bankName) {
-        if (!bankName) return "";
-        const cleanName = bankName.toUpperCase().trim();
-        for (let key in SWIFT_CODES) {
-            if (cleanName.includes(key)) return SWIFT_CODES[key];
-        }
-        return ""; 
-    }
-
-    function switchMode(mode) {
-        currentMode = mode;
-        const root = document.documentElement;
-        const tabs = document.querySelectorAll('.tab-btn');
-        tabs.forEach(t => t.classList.remove('active'));
-        document.querySelector(`.tab-btn[data-mode="${mode}"]`).classList.add('active');
-
-        if(mode === 'BCA') {
-            root.style.setProperty('--active-color', '#005696');
-            document.getElementById('modeTitle').innerText = "BCA Bulk Formatter - Sesama BCA";
-            document.getElementById('transferTypeContainer').style.display = 'none';
-        } else {
-            root.style.setProperty('--active-color', '#c0392b');
-            document.getElementById('modeTitle').innerText = "BCA Bulk Formatter - Antar Bank (Non-BCA)";
-            document.getElementById('transferTypeContainer').style.display = 'block';
-        }
-        processManualData();
+        document.getElementById('grandTotalDisplay').innerText = "IDR " + total.toLocaleString('id-ID');
+        document.getElementById('status').innerText = `${data.length} Transaksi Terdeteksi`;
     }
 
     function copyDataOnly() {
@@ -285,17 +193,12 @@
         window.getSelection().removeAllRanges();
         window.getSelection().addRange(range);
         document.execCommand('copy');
-        alert("Data tabel berhasil disalin!");
+        alert("Data tersalin!");
         window.getSelection().removeAllRanges();
     }
 
     function resetAll() {
-        if(confirm("Hapus semua data?")) {
-            document.querySelectorAll('textarea').forEach(t => t.value = "");
-            document.getElementById('tableBody').innerHTML = "";
-            document.getElementById('grandTotalDisplay').innerText = "IDR 0";
-            document.getElementById('status').innerText = "0 Transaksi Terdeteksi";
-        }
+        if(confirm("Reset data?")) location.reload();
     }
 </script>
 </body>
