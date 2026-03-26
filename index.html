@@ -18,19 +18,23 @@
         .config-item { display: flex; flex-direction: column; }
         .config-item label { font-weight: bold; font-size: 11px; color: var(--active-color); margin-bottom: 4px; }
         .config-item input, .config-item select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; }
-        .upload-btn { background: #563d7c; color: white; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; border: none; }
+        .upload-btn { background: #563d7c; color: white; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; border: none; transition: 0.2s; }
+        .upload-btn:hover { background: #452a63; }
         .summary-badge { background: var(--active-color); color: white; padding: 10px 20px; border-radius: 8px; text-align: right; min-width: 220px; }
-        .summary-badge span { font-size: 20px; font-weight: bold; display: block; }
+        .summary-badge small { display: block; font-size: 11px; opacity: 0.8; }
+        .summary-badge span { font-size: 20px; font-weight: bold; }
         .input-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .input-group { display: flex; flex-direction: column; }
+        .input-group.hidden { display: none; }
         label { font-weight: bold; font-size: 10px; margin-bottom: 4px; color: #444; background: #eee; padding: 4px 8px; border-radius: 4px; }
         textarea { height: 100px; padding: 10px; border: 1px solid #cbd5e0; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 11px; resize: none; }
         .actions { margin-top: 20px; display: flex; gap: 12px; align-items: center; border-top: 1px solid #eee; padding-top: 20px; }
-        button.main-btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
+        button.main-btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; color: white; }
         .btn-copy { background: #28a745; }
         .btn-reset { background: #dc3545; }
         .table-wrapper { margin-top: 20px; overflow-x: auto; max-height: 400px; border: 1px solid #ddd; }
         table { width: 100%; border-collapse: collapse; font-size: 10px; white-space: nowrap; }
-        th { background: var(--active-color); color: white; padding: 10px; position: sticky; top: 0; z-index: 10; }
+        th { background: var(--active-color); color: white; padding: 10px; text-align: left; position: sticky; top: 0; z-index: 10; }
         td { border: 1px solid #eee; padding: 8px; }
         tr:nth-child(even) { background: #fafafa; }
         footer { margin-top: 30px; text-align: center; font-size: 13px; color: #7f8c8d; border-top: 1px solid #eee; padding-top: 15px; }
@@ -81,7 +85,7 @@
             <label>1. Receiver Name</label>
             <textarea id="in_name" oninput="generateTable()"></textarea>
         </div>
-        <div class="input-group non-bca-field" style="display:none;">
+        <div class="input-group non-bca-field hidden">
             <label>2. Receiver Bank Name</label>
             <textarea id="in_bank_name" oninput="generateTable()" placeholder="e.g. Mandiri, BRI, BNI"></textarea>
         </div>
@@ -95,7 +99,7 @@
         </div>
         <div class="input-group">
             <label id="remarkLabel">4. Remark (Manual)</label>
-            <textarea id="in_remark" oninput="generateTable()"></textarea>
+            <textarea id="in_remark" oninput="generateTable()" placeholder="Ketik di sini untuk edit remark manual"></textarea>
         </div>
         <div class="input-group">
             <label>5. Beneficiary Email</label>
@@ -133,7 +137,7 @@
     };
 
     let currentMode = 'BCA';
-    let uploadedData = []; 
+    let uploadedData = [];
 
     window.onload = function() {
         const now = new Date();
@@ -153,12 +157,12 @@
         if(mode === 'BCA') {
             root.style.setProperty('--active-color', '#005696');
             document.getElementById('modeTitle').innerText = "BCA Bulk Formatter - Sesama BCA";
-            document.querySelectorAll('.non-bca-field').forEach(f => f.style.display = 'none');
+            document.querySelectorAll('.non-bca-field').forEach(f => f.classList.add('hidden'));
             document.getElementById('transferTypeContainer').style.display = 'none';
         } else {
             root.style.setProperty('--active-color', '#c0392b');
             document.getElementById('modeTitle').innerText = "BCA Bulk Formatter - Antar Bank (Non-BCA)";
-            document.querySelectorAll('.non-bca-field').forEach(f => f.style.display = 'flex');
+            document.querySelectorAll('.non-bca-field').forEach(f => f.classList.remove('hidden'));
             document.getElementById('transferTypeContainer').style.display = 'block';
         }
         generateTable();
@@ -175,21 +179,28 @@
             const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
 
             uploadedData = [];
+            // Reset input manual ke dalam textbox agar bisa diedit
+            let nameList = "", rekList = "", amtList = "", remList = "";
+
             for(let i = 8; i < jsonData.length; i++) {
                 const row = jsonData[i];
                 if(!row || !row[1]) continue; 
 
                 const accNo = (row[3] || "").toString().replace(/[^0-9]/g, '');
-                
-                uploadedData.push({
-                    name: (row[2] || "").toString().trim(),
-                    rek: accNo,
-                    amt: row[4] || 0, // Akan di-rounding up di generateTable
-                    excelInvoice: (row[1] || "").toString().trim() // Invoice disimpan khusus
-                });
+                const invCode = (row[1] || "").toString();
+                const amtVal = row[4] || 0;
+
+                nameList += (row[2] || "").toString() + "\n";
+                rekList += accNo + "\n";
+                amtList += amtVal + "\n";
+                remList += invCode + "\n"; // Masukkan Invoice Code ke Remark Manual
             }
-            // Kosongkan input manual kecuali Remark & Email (agar bisa ditambah manual)
-            ['in_name','in_rek','in_amt','in_bank_name'].forEach(id => document.getElementById(id).value = "");
+
+            document.getElementById('in_name').value = nameList.trim();
+            document.getElementById('in_rek').value = rekList.trim();
+            document.getElementById('in_amt').value = amtList.trim();
+            document.getElementById('in_remark').value = remList.trim();
+            
             generateTable();
             event.target.value = '';
         };
@@ -209,49 +220,13 @@
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = "";
         
-        let finalRows = [];
+        const names = document.getElementById('in_name').value.split('\n');
+        const reks = document.getElementById('in_rek').value.split('\n');
+        const amts = document.getElementById('in_amt').value.split('\n');
+        const remarks = document.getElementById('in_remark').value.split('\n');
+        const banks = document.getElementById('in_bank_name').value.split('\n');
+        const emails = document.getElementById('in_email').value.split('\n');
         
-        // Ambil data manual Remark & Email (walaupun upload tetap bisa dibaca)
-        const manualRemarks = document.getElementById('in_remark').value.split('\n');
-        const manualEmails = document.getElementById('in_email').value.split('\n');
-        const manualBanks = document.getElementById('in_bank_name').value.split('\n');
-
-        if (uploadedData.length > 0) {
-            // JIKA UPLOAD
-            finalRows = uploadedData.map((data, i) => {
-                const manRem = (manualRemarks[i] || "").trim();
-                return {
-                    name: data.name,
-                    rek: data.rek,
-                    amt: data.amt,
-                    rem1: manRem.substring(0, 18), // Dari input manual no 4
-                    rem2: data.excelInvoice,       // Dari kolom Invoice Code Excel
-                    bankName: (manualBanks[i] || "").trim(),
-                    email: (manualEmails[i] || "").trim()
-                };
-            });
-        } else {
-            // JIKA FULL MANUAL
-            const names = document.getElementById('in_name').value.split('\n');
-            const reks = document.getElementById('in_rek').value.split('\n');
-            const amts = document.getElementById('in_amt').value.split('\n');
-            
-            const maxRows = Math.max(names.length, reks.length, amts.length);
-            for (let i = 0; i < maxRows; i++) {
-                if (!names[i] && !reks[i]) continue;
-                const fullRem = (manualRemarks[i] || "").trim();
-                finalRows.push({
-                    name: (names[i] || "").trim(),
-                    rek: (reks[i] || "").trim(),
-                    amt: amts[i] || 0,
-                    rem1: fullRem.substring(0, 18),
-                    rem2: fullRem.substring(18),
-                    bankName: (manualBanks[i] || "").trim(),
-                    email: (manualEmails[i] || "").trim()
-                });
-            }
-        }
-
         const masterId = document.getElementById('master_txid').value.trim();
         const effDate = document.getElementById('custom_date').value.trim();
         const defType = currentMode === 'BCA' ? 'BCA' : document.getElementById('def_type').value;
@@ -263,34 +238,45 @@
             prefix = parts.join('-') + '-';
         }
 
+        const maxRows = Math.max(names.length, reks.length, amts.length);
         let totalAmount = 0;
-        finalRows.forEach((item, index) => {
-            const currentTxId = `${prefix}${String(startNum + index).padStart(2, '0')}`;
+        let validCount = 0;
+
+        for (let i = 0; i < maxRows; i++) {
+            if (!names[i] && !reks[i]) continue;
+            validCount++;
             
-            // LOGIC ROUNDING UP (Pembulatan ke atas agar tidak selisih)
-            const rawAmt = item.amt.toString().replace(/[^0-9.]/g, '');
-            const numAmt = Math.ceil(parseFloat(rawAmt) || 0); 
+            const currentTxId = `${prefix}${String(startNum + (validCount - 1)).padStart(2, '0')}`;
             
+            // Logic Rounding Up Amount
+            const rawAmt = parseFloat(amts[i] ? amts[i].toString().replace(/[^0-9.]/g, '') : "0") || 0;
+            const numAmt = Math.ceil(rawAmt); 
             totalAmount += numAmt;
-            const autoSwift = currentMode === 'BCA' ? "" : detectSwiftCode(item.bankName);
+
+            const fullRemark = (remarks[i] || "").trim();
+            const bankNameInput = (banks[i] || "").trim();
+            const autoSwift = currentMode === 'BCA' ? "" : detectSwiftCode(bankNameInput);
+
+            // Logic Remark: Remark 2 dibatasi 18 Karakter
+            const rem1 = fullRemark.substring(0, 18);
+            const rem2 = fullRemark.substring(18, 36); // Ambil sisa/lanjutan tetap max 18 karakter
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${index + 1}</td><td>${currentTxId}</td><td>${defType}</td>
-                <td>5995333390</td><td></td><td>${item.rek}</td>
+                <td>${validCount}</td><td>${currentTxId}</td><td>${defType}</td>
+                <td>5995333390</td><td></td><td>${(reks[i] || "").trim()}</td>
                 <td>${numAmt}</td><td>${effDate}</td><td></td><td>IDR</td><td>OUR</td>
                 <td>5995333390</td>
-                <td>${item.rem1}</td>
-                <td>${item.rem2}</td>
-                <td>${autoSwift}</td><td>${item.bankName.toUpperCase()}</td>
-                <td>${item.name.toUpperCase()}</td>
-                <td></td><td></td><td></td><td>${item.email}</td>
+                <td>${rem1}</td><td>${rem2}</td>
+                <td>${autoSwift}</td><td>${bankNameInput.toUpperCase()}</td>
+                <td>${(names[i] || "").trim().toUpperCase()}</td>
+                <td></td><td></td><td></td><td>${(emails[i] || "").trim()}</td>
             `;
             tbody.appendChild(tr);
-        });
+        }
 
         document.getElementById('grandTotalDisplay').innerText = "IDR " + totalAmount.toLocaleString('id-ID');
-        document.getElementById('status').innerText = `${finalRows.length} Transaksi Terdeteksi`;
+        document.getElementById('status').innerText = `${validCount} Transaksi Terdeteksi`;
     }
 
     function copyDataOnly() {
