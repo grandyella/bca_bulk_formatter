@@ -98,7 +98,7 @@
         </div>
         <div class="input-group">
             <label id="remarkLabel">4. Remark (Manual)</label>
-            <textarea id="in_remark" oninput="generateTable()" placeholder="Bisa diisi meskipun upload excel"></textarea>
+            <textarea id="in_remark" oninput="generateTable()" placeholder="Ketik remark manual di sini"></textarea>
         </div>
         <div class="input-group">
             <label>5. Beneficiary Email</label>
@@ -182,17 +182,24 @@
                 if(!row || !row[1]) continue; 
 
                 const accNo = (row[3] || "").toString().replace(/[^0-9]/g, '');
+                
+                // Logic Perbaikan Selisih:
+                // 1. Ambil raw value
+                let rawAmt = parseFloat(row[4]) || 0;
+                // 2. Bersihkan presisi desimal ke 2 angka di belakang koma (standard Excel)
+                let cleanedAmt = parseFloat(rawAmt.toFixed(2));
+                // 3. Bulatkan ke atas (Rounding Up) sesuai permintaan
+                let roundedAmt = Math.ceil(cleanedAmt);
 
                 uploadedData.push({
                     name: (row[2] || "").toString(),
                     rek: accNo,
-                    amt: row[4] || 0,
+                    amt: roundedAmt,
                     excelInvoice: (row[1] || "").toString(),
                     bankName: "",
                     email: ""
                 });
             }
-            // Kosongkan manual input KECUALI Remark agar tetap bisa diisi
             ['in_name','in_rek','in_amt','in_bank_name','in_email'].forEach(id => document.getElementById(id).value = "");
             generateTable();
             event.target.value = '';
@@ -217,18 +224,15 @@
         const manualRemarks = document.getElementById('in_remark').value.split('\n');
 
         if (uploadedData.length > 0) {
-            // Jika ada upload, gabungkan dengan remark manual jika ada
             finalData = uploadedData.map((item, index) => {
                 const manualRem = (manualRemarks[index] || "").trim();
                 return {
                     ...item,
                     rem1: manualRem.substring(0, 18),
-                    // Remark 2 diambil dari Invoice Excel (Dibatasi 18 Karakter)
-                    rem2: item.excelInvoice.substring(0, 18)
+                    rem2: item.excelInvoice.substring(0, 18) // Batas 18 karakter Remark 2
                 };
             });
         } else {
-            // Full Manual Input
             const names = document.getElementById('in_name').value.split('\n');
             const reks = document.getElementById('in_rek').value.split('\n');
             const amts = document.getElementById('in_amt').value.split('\n');
@@ -239,10 +243,15 @@
             for (let i = 0; i < maxRows; i++) {
                 if (!names[i] && !reks[i]) continue;
                 const fullRemark = (manualRemarks[i] || "").trim();
+                
+                // Manual input pun kita buat konsisten rounding up
+                let rawVal = parseFloat((amts[i] || "0").toString().replace(/[^0-9.]/g, '')) || 0;
+                let finalVal = Math.ceil(parseFloat(rawVal.toFixed(2)));
+
                 finalData.push({
                     name: (names[i] || "").trim(),
                     rek: (reks[i] || "").trim(),
-                    amt: amts[i] || 0,
+                    amt: finalVal,
                     rem1: fullRemark.substring(0, 18),
                     rem2: fullRemark.substring(18, 36),
                     bankName: (banks[i] || "").trim(),
@@ -265,9 +274,7 @@
         let totalAmount = 0;
         finalData.forEach((item, index) => {
             const currentTxId = `${prefix}${String(startNum + index).padStart(2, '0')}`;
-            
-            // LOGIC ROUNDING UP (Dibulatkan ke atas)
-            const numAmt = Math.ceil(parseFloat(item.amt.toString().replace(/[^0-9.]/g, '')) || 0);
+            const numAmt = item.amt;
             totalAmount += numAmt;
 
             const autoSwift = currentMode === 'BCA' ? "" : detectSwiftCode(item.bankName);
