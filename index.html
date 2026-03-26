@@ -98,11 +98,11 @@
         </div>
         <div class="input-group">
             <label id="remarkLabel">4. Remark (Manual)</label>
-            <textarea id="in_remark" oninput="generateTable()" placeholder="Remark manual tetap aktif saat upload"></textarea>
+            <textarea id="in_remark" oninput="generateTable()" placeholder="Ketik remark manual di sini"></textarea>
         </div>
         <div class="input-group">
-            <label>5. Beneficiary Email</label>
-            <textarea id="in_email" oninput="generateTable()"></textarea>
+            <label>5. Beneficiary Email (Manual)</label>
+            <textarea id="in_email" oninput="generateTable()" placeholder="Ketik email manual di sini"></textarea>
         </div>
     </div>
 
@@ -183,10 +183,8 @@
 
                 const accNo = (row[3] || "").toString().replace(/[^0-9]/g, '');
                 
-                // --- LOGIC EXACT DECIMAL ---
+                // EXACT DECIMAL LOGIC
                 let rawVal = parseFloat(row[4]) || 0;
-                // Menggunakan toFixed(2) untuk membuang floating point error (.00000003) 
-                // tapi tetap menjaga angka desimal (sen) tetap ada.
                 let finalVal = parseFloat(rawVal.toFixed(2)); 
 
                 uploadedData.push({
@@ -195,10 +193,12 @@
                     amt: finalVal,
                     excelInvoice: (row[1] || "").toString(),
                     bankName: "",
+                    // Email akan diambil dari input manual di generateTable
                     email: ""
                 });
             }
-            ['in_name','in_rek','in_amt','in_bank_name','in_email'].forEach(id => document.getElementById(id).value = "");
+            // Kosongkan input manual KECUALI Remark dan Email agar bisa diisi manual
+            ['in_name','in_rek','in_amt','in_bank_name'].forEach(id => document.getElementById(id).value = "");
             generateTable();
             event.target.value = '';
         };
@@ -220,14 +220,17 @@
         
         let finalData = [];
         const manualRemarks = document.getElementById('in_remark').value.split('\n');
+        const manualEmails = document.getElementById('in_email').value.split('\n');
 
         if (uploadedData.length > 0) {
             finalData = uploadedData.map((item, index) => {
                 const manualRem = (manualRemarks[index] || "").trim();
+                const manualMail = (manualEmails[index] || "").trim();
                 return {
                     ...item,
                     rem1: manualRem.substring(0, 18),
-                    rem2: item.excelInvoice.substring(0, 18) 
+                    rem2: item.excelInvoice.substring(0, 18),
+                    email: manualMail // Prioritaskan input manual untuk email
                 };
             });
         } else {
@@ -235,7 +238,6 @@
             const reks = document.getElementById('in_rek').value.split('\n');
             const amts = document.getElementById('in_amt').value.split('\n');
             const banks = document.getElementById('in_bank_name').value.split('\n');
-            const emails = document.getElementById('in_email').value.split('\n');
             
             const maxRows = Math.max(names.length, reks.length, amts.length);
             for (let i = 0; i < maxRows; i++) {
@@ -252,7 +254,7 @@
                     rem1: fullRemark.substring(0, 18),
                     rem2: fullRemark.substring(18, 36),
                     bankName: (banks[i] || "").trim(),
-                    email: (emails[i] || "").trim()
+                    email: (manualEmails[i] || "").trim()
                 });
             }
         }
@@ -290,7 +292,6 @@
             tbody.appendChild(tr);
         });
 
-        // Tampilan total menggunakan desimal yang tepat
         document.getElementById('grandTotalDisplay').innerText = "IDR " + totalAmount.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         document.getElementById('status').innerText = `${finalData.length} Transaksi Terdeteksi`;
     }
@@ -303,7 +304,7 @@
         window.getSelection().removeAllRanges();
         window.getSelection().addRange(range);
         document.execCommand('copy');
-        alert("Data desimal berhasil disalin!");
+        alert("Data berhasil disalin!");
         window.getSelection().removeAllRanges();
     }
 
