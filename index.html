@@ -19,7 +19,6 @@
         .config-item label { font-weight: bold; font-size: 11px; color: var(--active-color); margin-bottom: 4px; }
         .config-item input, .config-item select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; }
         .upload-btn { background: #563d7c; color: white; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; border: none; transition: 0.2s; }
-        .upload-btn:hover { background: #452a63; }
         .summary-badge { background: var(--active-color); color: white; padding: 10px 20px; border-radius: 8px; text-align: right; min-width: 220px; }
         .summary-badge small { display: block; font-size: 11px; opacity: 0.8; }
         .summary-badge span { font-size: 20px; font-weight: bold; }
@@ -99,7 +98,7 @@
         </div>
         <div class="input-group">
             <label id="remarkLabel">4. Remark (Manual)</label>
-            <textarea id="in_remark" oninput="generateTable()" placeholder="Ketik di sini untuk edit remark manual"></textarea>
+            <textarea id="in_remark" oninput="generateTable()" placeholder="Bisa diisi meskipun upload excel"></textarea>
         </div>
         <div class="input-group">
             <label>5. Beneficiary Email</label>
@@ -150,8 +149,7 @@
     function switchMode(mode) {
         currentMode = mode;
         const root = document.documentElement;
-        const tabs = document.querySelectorAll('.tab-btn');
-        tabs.forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
         document.querySelector(`.tab-btn[data-mode="${mode}"]`).classList.add('active');
 
         if(mode === 'BCA') {
@@ -179,28 +177,23 @@
             const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
 
             uploadedData = [];
-            // Reset input manual ke dalam textbox agar bisa diedit
-            let nameList = "", rekList = "", amtList = "", remList = "";
-
             for(let i = 8; i < jsonData.length; i++) {
                 const row = jsonData[i];
                 if(!row || !row[1]) continue; 
 
                 const accNo = (row[3] || "").toString().replace(/[^0-9]/g, '');
-                const invCode = (row[1] || "").toString();
-                const amtVal = row[4] || 0;
 
-                nameList += (row[2] || "").toString() + "\n";
-                rekList += accNo + "\n";
-                amtList += amtVal + "\n";
-                remList += invCode + "\n"; // Masukkan Invoice Code ke Remark Manual
+                uploadedData.push({
+                    name: (row[2] || "").toString(),
+                    rek: accNo,
+                    amt: row[4] || 0,
+                    excelInvoice: (row[1] || "").toString(),
+                    bankName: "",
+                    email: ""
+                });
             }
-
-            document.getElementById('in_name').value = nameList.trim();
-            document.getElementById('in_rek').value = rekList.trim();
-            document.getElementById('in_amt').value = amtList.trim();
-            document.getElementById('in_remark').value = remList.trim();
-            
+            // Kosongkan manual input KECUALI Remark agar tetap bisa diisi
+            ['in_name','in_rek','in_amt','in_bank_name','in_email'].forEach(id => document.getElementById(id).value = "");
             generateTable();
             event.target.value = '';
         };
@@ -220,13 +213,44 @@
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = "";
         
-        const names = document.getElementById('in_name').value.split('\n');
-        const reks = document.getElementById('in_rek').value.split('\n');
-        const amts = document.getElementById('in_amt').value.split('\n');
-        const remarks = document.getElementById('in_remark').value.split('\n');
-        const banks = document.getElementById('in_bank_name').value.split('\n');
-        const emails = document.getElementById('in_email').value.split('\n');
-        
+        let finalData = [];
+        const manualRemarks = document.getElementById('in_remark').value.split('\n');
+
+        if (uploadedData.length > 0) {
+            // Jika ada upload, gabungkan dengan remark manual jika ada
+            finalData = uploadedData.map((item, index) => {
+                const manualRem = (manualRemarks[index] || "").trim();
+                return {
+                    ...item,
+                    rem1: manualRem.substring(0, 18),
+                    // Remark 2 diambil dari Invoice Excel (Dibatasi 18 Karakter)
+                    rem2: item.excelInvoice.substring(0, 18)
+                };
+            });
+        } else {
+            // Full Manual Input
+            const names = document.getElementById('in_name').value.split('\n');
+            const reks = document.getElementById('in_rek').value.split('\n');
+            const amts = document.getElementById('in_amt').value.split('\n');
+            const banks = document.getElementById('in_bank_name').value.split('\n');
+            const emails = document.getElementById('in_email').value.split('\n');
+            
+            const maxRows = Math.max(names.length, reks.length, amts.length);
+            for (let i = 0; i < maxRows; i++) {
+                if (!names[i] && !reks[i]) continue;
+                const fullRemark = (manualRemarks[i] || "").trim();
+                finalData.push({
+                    name: (names[i] || "").trim(),
+                    rek: (reks[i] || "").trim(),
+                    amt: amts[i] || 0,
+                    rem1: fullRemark.substring(0, 18),
+                    rem2: fullRemark.substring(18, 36),
+                    bankName: (banks[i] || "").trim(),
+                    email: (emails[i] || "").trim()
+                });
+            }
+        }
+
         const masterId = document.getElementById('master_txid').value.trim();
         const effDate = document.getElementById('custom_date').value.trim();
         const defType = currentMode === 'BCA' ? 'BCA' : document.getElementById('def_type').value;
@@ -238,45 +262,33 @@
             prefix = parts.join('-') + '-';
         }
 
-        const maxRows = Math.max(names.length, reks.length, amts.length);
         let totalAmount = 0;
-        let validCount = 0;
-
-        for (let i = 0; i < maxRows; i++) {
-            if (!names[i] && !reks[i]) continue;
-            validCount++;
+        finalData.forEach((item, index) => {
+            const currentTxId = `${prefix}${String(startNum + index).padStart(2, '0')}`;
             
-            const currentTxId = `${prefix}${String(startNum + (validCount - 1)).padStart(2, '0')}`;
-            
-            // Logic Rounding Up Amount
-            const rawAmt = parseFloat(amts[i] ? amts[i].toString().replace(/[^0-9.]/g, '') : "0") || 0;
-            const numAmt = Math.ceil(rawAmt); 
+            // LOGIC ROUNDING UP (Dibulatkan ke atas)
+            const numAmt = Math.ceil(parseFloat(item.amt.toString().replace(/[^0-9.]/g, '')) || 0);
             totalAmount += numAmt;
 
-            const fullRemark = (remarks[i] || "").trim();
-            const bankNameInput = (banks[i] || "").trim();
-            const autoSwift = currentMode === 'BCA' ? "" : detectSwiftCode(bankNameInput);
-
-            // Logic Remark: Remark 2 dibatasi 18 Karakter
-            const rem1 = fullRemark.substring(0, 18);
-            const rem2 = fullRemark.substring(18, 36); // Ambil sisa/lanjutan tetap max 18 karakter
+            const autoSwift = currentMode === 'BCA' ? "" : detectSwiftCode(item.bankName);
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${validCount}</td><td>${currentTxId}</td><td>${defType}</td>
-                <td>5995333390</td><td></td><td>${(reks[i] || "").trim()}</td>
+                <td>${index + 1}</td><td>${currentTxId}</td><td>${defType}</td>
+                <td>5995333390</td><td></td><td>${item.rek}</td>
                 <td>${numAmt}</td><td>${effDate}</td><td></td><td>IDR</td><td>OUR</td>
                 <td>5995333390</td>
-                <td>${rem1}</td><td>${rem2}</td>
-                <td>${autoSwift}</td><td>${bankNameInput.toUpperCase()}</td>
-                <td>${(names[i] || "").trim().toUpperCase()}</td>
-                <td></td><td></td><td></td><td>${(emails[i] || "").trim()}</td>
+                <td>${item.rem1}</td>
+                <td>${item.rem2}</td>
+                <td>${autoSwift}</td><td>${item.bankName.toUpperCase()}</td>
+                <td>${item.name.toUpperCase()}</td>
+                <td></td><td></td><td></td><td>${item.email}</td>
             `;
             tbody.appendChild(tr);
-        }
+        });
 
         document.getElementById('grandTotalDisplay').innerText = "IDR " + totalAmount.toLocaleString('id-ID');
-        document.getElementById('status').innerText = `${validCount} Transaksi Terdeteksi`;
+        document.getElementById('status').innerText = `${finalData.length} Transaksi Terdeteksi`;
     }
 
     function copyDataOnly() {
