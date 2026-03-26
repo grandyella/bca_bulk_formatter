@@ -19,7 +19,6 @@
         .config-item label { font-weight: bold; font-size: 11px; color: var(--active-color); margin-bottom: 4px; }
         .config-item input, .config-item select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-weight: bold; }
         
-        /* Style baru untuk Upload Area */
         .upload-section { border: 2px dashed #ccc; padding: 10px; border-radius: 8px; background: #fff; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: 0.2s; }
         .upload-section:hover { border-color: var(--active-color); background: #f0f7ff; }
         .upload-section input { display: none; }
@@ -74,7 +73,7 @@
                 </select>
             </div>
             <div class="upload-section" onclick="document.getElementById('excel_file').click()">
-                <span class="upload-label">📁 Upload Excel/CSV</span>
+                <span class="upload-label">📁 Upload Excel / CSV</span>
                 <input type="file" id="excel_file" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event)">
             </div>
         </div>
@@ -102,7 +101,7 @@
             <textarea id="in_amt" oninput="generateTable()"></textarea>
         </div>
         <div class="input-group">
-            <label id="remarkLabel">4. Remark</label>
+            <label id="remarkLabel">4. Remark (Invoice Code)</label>
             <textarea id="in_remark" oninput="generateTable()"></textarea>
         </div>
         <div class="input-group">
@@ -150,7 +149,6 @@
         document.getElementById('custom_date').value = `${day}/${month}/${year}`;
     };
 
-    // Fungsi Baru: Handle Upload Excel
     function handleFileUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -162,19 +160,24 @@
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(firstSheet, {header: 1});
 
-            // Reset textareas
             const fields = { name: [], rek: [], amt: [], remark: [], bank: [], email: [] };
 
-            // Start from row 1 (skip header)
             for(let i = 1; i < jsonData.length; i++) {
                 const row = jsonData[i];
-                if(row.length === 0) continue;
+                if(!row || row.length === 0) continue;
                 
-                fields.name.push(row[0] || "");
-                fields.rek.push(row[1] || "");
-                fields.amt.push(row[2] || "");
-                fields.remark.push(row[3] || "");
-                if (currentMode === 'NONBCA') fields.bank.push(row[4] || "");
+                // MAPPING SESUAI INSTRUKSI:
+                // Col A (0) -> Invoice Code (Remark)
+                // Col B (1) -> Nama Penerima
+                // Col C (2) -> Nomor Rekening
+                // Col D (3) -> Total Amount
+                // Col E (4) -> Nama Bank (Khusus Non-BCA)
+                
+                fields.remark.push(row[0] || "");
+                fields.name.push(row[1] || "");
+                fields.rek.push(row[2] || "");
+                fields.amt.push(row[3] || "");
+                fields.bank.push(row[4] || "");
                 fields.email.push(row[5] || "");
             }
 
@@ -182,11 +185,12 @@
             document.getElementById('in_rek').value = fields.rek.join('\n');
             document.getElementById('in_amt').value = fields.amt.join('\n');
             document.getElementById('in_remark').value = fields.remark.join('\n');
-            if (currentMode === 'NONBCA') document.getElementById('in_bank_name').value = fields.bank.join('\n');
+            document.getElementById('in_bank_name').value = fields.bank.join('\n');
             document.getElementById('in_email').value = fields.email.join('\n');
 
             generateTable();
-            event.target.value = ''; // clear input
+            event.target.value = ''; 
+            alert("Berhasil! Data Excel telah dipetakan ke kolom yang sesuai.");
         };
         reader.readAsArrayBuffer(file);
     }
@@ -214,7 +218,7 @@
 
     function detectSwiftCode(bankName) {
         if (!bankName) return "";
-        const cleanName = bankName.toUpperCase().trim();
+        const cleanName = bankName.toString().toUpperCase().trim();
         for (let key in SWIFT_CODES) {
             if (cleanName.includes(key)) return SWIFT_CODES[key];
         }
@@ -240,7 +244,7 @@
             prefix = parts.join('-') + '-';
         }
 
-        const maxRows = Math.max(names.length, reks.length, amts.length, emails.length);
+        const maxRows = Math.max(names.length, reks.length, amts.length);
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = "";
         let totalAmount = 0; let validCount = 0;
@@ -280,12 +284,12 @@
         window.getSelection().removeAllRanges();
         window.getSelection().addRange(range);
         document.execCommand('copy');
-        alert("Data berhasil disalin!");
+        alert("Data berhasil disalin! Silakan tempel (Paste) ke Excel BCA Anda.");
         window.getSelection().removeAllRanges();
     }
 
     function resetAll() {
-        if(confirm("Hapus semua data?")) {
+        if(confirm("Hapus semua data input?")) {
             ['in_name','in_rek','in_amt','in_remark','in_bank_name','in_email'].forEach(id => document.getElementById(id).value = "");
             generateTable();
         }
