@@ -74,7 +74,7 @@
             </div>
         </div>
         <div class="summary-badge">
-            <small>GRAND TOTAL AMOUNT (ROUNDED)</small>
+            <small>GRAND TOTAL AMOUNT (EXACT)</small>
             <span id="grandTotalDisplay">IDR 0</span>
         </div>
     </div>
@@ -98,7 +98,7 @@
         </div>
         <div class="input-group">
             <label id="remarkLabel">4. Remark (Manual)</label>
-            <textarea id="in_remark" oninput="generateTable()" placeholder="Bisa diisi manual per baris"></textarea>
+            <textarea id="in_remark" oninput="generateTable()" placeholder="Remark manual tetap aktif saat upload"></textarea>
         </div>
         <div class="input-group">
             <label>5. Beneficiary Email</label>
@@ -183,10 +183,11 @@
 
                 const accNo = (row[3] || "").toString().replace(/[^0-9]/g, '');
                 
-                // FIXED LOGIC: Ambil nilai pembulatan Excel (membuang desimal sampah)
-                // Menggunakan Math.floor untuk mencocokkan total kumulatif Excel di screenshot
+                // --- LOGIC EXACT DECIMAL ---
                 let rawVal = parseFloat(row[4]) || 0;
-                let finalVal = Math.floor(rawVal); 
+                // Menggunakan toFixed(2) untuk membuang floating point error (.00000003) 
+                // tapi tetap menjaga angka desimal (sen) tetap ada.
+                let finalVal = parseFloat(rawVal.toFixed(2)); 
 
                 uploadedData.push({
                     name: (row[2] || "").toString(),
@@ -242,7 +243,7 @@
                 const fullRemark = (manualRemarks[i] || "").trim();
                 
                 let rawVal = parseFloat((amts[i] || "0").toString().replace(/[^0-9.]/g, '')) || 0;
-                let finalVal = Math.floor(rawVal);
+                let finalVal = parseFloat(rawVal.toFixed(2));
 
                 finalData.push({
                     name: (names[i] || "").trim(),
@@ -289,7 +290,8 @@
             tbody.appendChild(tr);
         });
 
-        document.getElementById('grandTotalDisplay').innerText = "IDR " + totalAmount.toLocaleString('id-ID');
+        // Tampilan total menggunakan desimal yang tepat
+        document.getElementById('grandTotalDisplay').innerText = "IDR " + totalAmount.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         document.getElementById('status').innerText = `${finalData.length} Transaksi Terdeteksi`;
     }
 
@@ -301,7 +303,7 @@
         window.getSelection().removeAllRanges();
         window.getSelection().addRange(range);
         document.execCommand('copy');
-        alert("Data berhasil disalin!");
+        alert("Data desimal berhasil disalin!");
         window.getSelection().removeAllRanges();
     }
 
