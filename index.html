@@ -70,8 +70,8 @@
                 </select>
             </div>
             <div class="config-item">
-                <label>Upload Payment Batch / CSV:</label>
-                <button class="upload-btn" onclick="document.getElementById('excel_file').click()">📁 UPLOAD FILE CSV/EXCEL</button>
+                <label>Upload File (Payment Batch / MT100):</label>
+                <button class="upload-btn" onclick="document.getElementById('excel_file').click()">📁 PILIH FILE CSV/EXCEL</button>
                 <input type="file" id="excel_file" style="display:none" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event)">
             </div>
         </div>
@@ -99,7 +99,7 @@
             <textarea id="in_amt" oninput="generateTable()"></textarea>
         </div>
         <div class="input-group">
-            <label id="remarkLabel">4. Remark 1 (Manual/Invoice)</label>
+            <label id="remarkLabel">4. Remark 1</label>
             <textarea id="in_remark" oninput="generateTable()"></textarea>
         </div>
         <div class="input-group">
@@ -109,7 +109,7 @@
     </div>
 
     <div class="actions">
-        <button class="main-btn btn-copy" onclick="copyDataOnly()">SALIN DATA (COPAS READY)</button>
+        <button class="main-btn btn-copy" onclick="copyDataOnly()">SALIN DATA (MT100 READY)</button>
         <button class="main-btn btn-reset" onclick="resetAll()">RESET SEMUA</button>
         <div id="status" style="font-weight:bold; color:var(--active-color)">0 Transaksi Terdeteksi</div>
     </div>
@@ -131,10 +131,11 @@
 <script>
     const SWIFT_CODES = {
         "MANDIRI": "BMRIIDJA", "BRI": "BRINIDJA", "BNI": "BNINIDJA", "BCA": "CENAIDJA",
-        "CIMB": "CIMBIDJA", "DANAMON": "BDNIIDJA", "PERMATA": "BAPPIDJA", "MAYBANK": "IBBKIDJA",
-        "PANIN": "PANIIDJA", "OCBC": "OCBCIDJA", "BTPN": "BTPNIDJA", "BTN": "BBTNIDJA",
-        "DBS": "DBSSIDJA", "UOB": "UOVBIDJA", "MEGA": "MEGAIDJA", "MUAMALAT": "BBMIIDJA",
-        "BSI": "BSINIDJA", "SYARIAH INDONESIA": "BSINIDJA", "HSBC": "HSBCIDJA"
+        "BCA DIGITAL": "BBLUIDJA", "BLU": "BBLUIDJA", "CIMB": "CIMBIDJA", "DANAMON": "BDNIIDJA", 
+        "PERMATA": "BAPPIDJA", "MAYBANK": "IBBKIDJA", "PANIN": "PANIIDJA", "OCBC": "OCBCIDJA", 
+        "BTPN": "BTPNIDJA", "BTN": "BBTNIDJA", "DBS": "DBSSIDJA", "UOB": "UOVBIDJA", 
+        "MEGA": "MEGAIDJA", "MUAMALAT": "BBMIIDJA", "BSI": "BSINIDJA", "SYARIAH": "BSINIDJA", 
+        "HSBC": "HSBCIDJA"
     };
 
     let currentMode = 'BCA';
@@ -168,11 +169,20 @@
             document.getElementById('transferTypeContainer').style.display = 'block';
         } else {
             root.style.setProperty('--active-color', '#6f42c1');
-            document.getElementById('modeTitle').innerText = "Auto Convert: Payment Batch to MT100";
+            document.getElementById('modeTitle').innerText = "Auto Convert: MT100 Re-Formatter";
             document.getElementById('manualInputArea').style.display = 'none';
             document.getElementById('transferTypeContainer').style.display = 'none';
         }
         generateTable();
+    }
+
+    function detectSwiftCode(bankName) {
+        if (!bankName) return "";
+        const cleanName = bankName.toUpperCase();
+        for (let key in SWIFT_CODES) {
+            if (cleanName.includes(key)) return SWIFT_CODES[key];
+        }
+        return ""; 
     }
 
     function handleFileUpload(event) {
@@ -186,29 +196,47 @@
             const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
 
             uploadedData = [];
-            // Deteksi baris mulai data (biasanya baris ke-9)
-            let startIdx = jsonData.findIndex(row => row[0] == "1");
-            if (startIdx === -1) startIdx = 8; // Default jika tidak terdeteksi
+            
+            // CEK APAKAH FILE MT100 (21 KOLOM) ATAU PAYMENT BATCH (5 KOLOM)
+            const isMT100 = jsonData[0] && jsonData[0].length >= 20;
+            let startRow = isMT100 ? 1 : jsonData.findIndex(row => row[0] == "1");
+            if (startRow === -1) startRow = 8;
 
-            for(let i = startIdx; i < jsonData.length; i++) {
+            for(let i = startRow; i < jsonData.length; i++) {
                 const row = jsonData[i];
                 if(!row || !row[1]) continue; 
 
-                // Parsing kolom "Destination Bank" (format: Bank - Rek - Nama)
-                const destInfo = (row[3] || "").toString();
-                const parts = destInfo.split(" - ");
-                const bankName = parts[0] || "";
-                const accNo = parts[1] || "";
-                const beneficiaryName = parts[2] || row[2]; // Vendor as fallback
+                if (isMT100) {
+                    // MAPPING DARI FILE MT100 (Sesuai MT100_000032BATCH.csv)
+                    uploadedData.push({
+                        name: (row[16] || "").toString().trim(), // Receiver Name
+                        rek: (row[5] || "").toString().trim(),   // Credited Acc.
+                        amt: parseFloat(row[6]) || 0,            // Amount
+                        rem1: (row[12] || "").toString().trim(), // Remark 1
+                        rem2: (row[13] || "").toString().trim(), // Remark 2
+                        bank: (row[15] || "").toString().trim(), // Receiver Bank Name
+                        swift: (row[14] || "").toString().trim(),// Receiver Bank Cd
+                        email: (row[20] || "").toString().trim() // Beneficiary Email
+                    });
+                } else {
+                    // MAPPING DARI PAYMENT BATCH (5 KOLOM)
+                    const destInfo = (row[3] || "").toString();
+                    const parts = destInfo.split(" - ");
+                    const bankName = parts[0] || "";
+                    const accNo = parts[1] || "";
+                    const beneficiaryName = parts[2] || row[2];
 
-                uploadedData.push({
-                    name: beneficiaryName.toString().trim(),
-                    rek: accNo.toString().trim(),
-                    amt: parseFloat(row[4]) || 0,
-                    invoice: (row[1] || "").toString().trim(),
-                    bank: bankName.toString().trim(),
-                    vendor: (row[2] || "").toString().trim()
-                });
+                    uploadedData.push({
+                        name: beneficiaryName.toString().trim(),
+                        rek: accNo.toString().trim(),
+                        amt: parseFloat(row[4]) || 0,
+                        rem1: (row[1] || "").toString().trim(), // Invoice Code
+                        rem2: (row[2] || "").toString().trim(), // Vendor
+                        bank: bankName.toString().trim(),
+                        swift: detectSwiftCode(bankName),
+                        email: "" // Payment Batch tidak ada email
+                    });
+                }
             }
             generateTable();
             event.target.value = '';
@@ -224,15 +252,6 @@
         return `${parseInt(parts[0])} ${months[parseInt(parts[1])-1]} ${parts[2]}`;
     }
 
-    function detectSwiftCode(bankName) {
-        if (!bankName) return "";
-        const cleanName = bankName.toUpperCase();
-        for (let key in SWIFT_CODES) {
-            if (cleanName.includes(key)) return SWIFT_CODES[key];
-        }
-        return "BANK-LAIN"; 
-    }
-
     function generateTable() {
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = "";
@@ -244,10 +263,7 @@
         if (currentMode === 'CONVERT' && uploadedData.length > 0) {
             finalData = uploadedData.map(item => ({
                 ...item,
-                type: item.bank.toUpperCase().includes("BCA") ? "BCA" : "BIF",
-                swift: item.bank.toUpperCase().includes("BCA") ? "CENAIDJA" : detectSwiftCode(item.bank),
-                rem1: item.invoice,
-                rem2: item.vendor
+                type: item.bank.toUpperCase().includes("BCA") ? "BCA" : "BIF"
             }));
         } else {
             const names = document.getElementById('in_name').value.split('\n');
@@ -260,15 +276,17 @@
             const maxRows = Math.max(names.length, reks.length, amts.length);
             for (let i = 0; i < maxRows; i++) {
                 if (!names[i] && !reks[i]) continue;
+                const bName = (banks[i] || "").trim();
                 finalData.push({
                     name: (names[i] || "").trim(),
                     rek: (reks[i] || "").trim(),
                     amt: parseFloat((amts[i] || "0").replace(/[^0-9.]/g, '')) || 0,
-                    bank: (banks[i] || "").trim(),
+                    bank: bName,
                     rem1: (rems[i] || "").trim(),
-                    vendor: (mails[i] || "").trim(),
+                    rem2: "",
+                    email: (mails[i] || "").trim(),
                     type: currentMode === 'BCA' ? 'BCA' : document.getElementById('def_type').value,
-                    swift: currentMode === 'BCA' ? "CENAIDJA" : detectSwiftCode(banks[i] || "")
+                    swift: currentMode === 'BCA' ? "CENAIDJA" : detectSwiftCode(bName)
                 });
             }
         }
@@ -288,12 +306,27 @@
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${index + 1}</td><td>${currentTxId}</td><td>${item.type}</td>
-                <td>5995333390</td><td></td><td>${item.rek}</td>
-                <td>${item.amt.toFixed(2)}</td><td>${displayDate}</td><td></td><td>IDR</td><td>OUR</td>
-                <td>5995333390</td><td>${item.rem1}</td><td>${item.rem2}</td>
-                <td>${item.swift}</td><td>${item.bank.toUpperCase()}</td>
-                <td>${item.name.toUpperCase()}</td><td>1</td><td>1</td><td>78</td><td></td>
+                <td>${index + 1}</td>
+                <td>${currentTxId}</td>
+                <td>${item.type}</td>
+                <td>5995333390</td>
+                <td></td>
+                <td>${item.rek}</td>
+                <td>${item.amt.toFixed(2)}</td>
+                <td>${displayDate}</td>
+                <td></td>
+                <td>IDR</td>
+                <td>OUR</td>
+                <td>5995333390</td>
+                <td>${item.rem1}</td>
+                <td>${item.rem2}</td>
+                <td>${item.swift}</td>
+                <td>${item.bank.toUpperCase()}</td>
+                <td>${item.name.toUpperCase()}</td>
+                <td>1</td>
+                <td>1</td>
+                <td>78</td>
+                <td>${item.email}</td>
             `;
             tbody.appendChild(tr);
         });
@@ -310,7 +343,7 @@
         window.getSelection().removeAllRanges();
         window.getSelection().addRange(range);
         document.execCommand('copy');
-        alert("Data MT100 berhasil disalin! Silakan paste ke Excel/CSV.");
+        alert("Data MT100 berhasil disalin!");
         window.getSelection().removeAllRanges();
     }
 
