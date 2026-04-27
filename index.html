@@ -5,13 +5,14 @@
     <title>BCA Bulk Tools Pro - Ahmad Zulfikar T</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        :root { --bca-blue: #005696; --nonbca-red: #c0392b; --active-color: #005696; }
+        :root { --bca-blue: #005696; --nonbca-red: #c0392b; --mt100-purple: #6f42c1; --active-color: #005696; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 20px; background-color: #f0f4f7; }
         .container { max-width: 100%; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
         .tab-btn { padding: 10px 25px; cursor: pointer; border: none; border-radius: 6px; font-weight: bold; background: #ddd; color: #666; transition: 0.3s; }
         .tab-btn.active[data-mode="BCA"] { background: var(--bca-blue); color: white; }
         .tab-btn.active[data-mode="NONBCA"] { background: var(--nonbca-red); color: white; }
+        .tab-btn.active[data-mode="CONVERT"] { background: var(--mt100-purple); color: white; }
         h2 { color: var(--active-color); border-bottom: 2px solid var(--active-color); padding-bottom: 10px; margin-bottom: 20px; }
         .header-config { background: #f8fbff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 5px solid var(--active-color); display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 15px;}
         .config-row { display: flex; gap: 15px; align-items: center; }
@@ -31,7 +32,7 @@
         button.main-btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; }
         .btn-copy { background: #28a745; }
         .btn-reset { background: #dc3545; }
-        .table-wrapper { margin-top: 20px; overflow-x: auto; max-height: 400px; border: 1px solid #ddd; }
+        .table-wrapper { margin-top: 20px; overflow-x: auto; max-height: 450px; border: 1px solid #ddd; }
         table { width: 100%; border-collapse: collapse; font-size: 10px; white-space: nowrap; }
         th { background: var(--active-color); color: white; padding: 10px; text-align: left; position: sticky; top: 0; z-index: 10; }
         td { border: 1px solid #eee; padding: 8px; }
@@ -45,6 +46,7 @@
     <div class="tabs">
         <button class="tab-btn active" data-mode="BCA" onclick="switchMode('BCA')">SESAMA BCA</button>
         <button class="tab-btn" data-mode="NONBCA" onclick="switchMode('NONBCA')">ANTAR BANK (NON-BCA)</button>
+        <button class="tab-btn" data-mode="CONVERT" onclick="switchMode('CONVERT')">CONVERT MT100 (CSV)</button>
     </div>
 
     <h2 id="modeTitle">BCA Bulk Formatter - Sesama BCA</h2>
@@ -53,11 +55,11 @@
         <div class="config-row">
             <div class="config-item">
                 <label>Master Transaction ID:</label>
-                <input type="text" id="master_txid" oninput="generateTable()" value="BCA-RE-270226-01">
+                <input type="text" id="master_txid" oninput="generateTable()" value="BCA-CA-280426-01">
             </div>
             <div class="config-item">
-                <label>Effective Date (DD/MM/YYYY):</label>
-                <input type="text" id="custom_date" oninput="generateTable()">
+                <label>Effective Date:</label>
+                <input type="text" id="custom_date" oninput="generateTable()" placeholder="DD/MM/YYYY">
             </div>
             <div class="config-item" id="transferTypeContainer" style="display:none;">
                 <label>Method:</label>
@@ -68,25 +70,25 @@
                 </select>
             </div>
             <div class="config-item">
-                <label>Upload Payment Batch:</label>
-                <button class="upload-btn" onclick="document.getElementById('excel_file').click()">📁 PILIH EXCEL / CSV</button>
+                <label>Upload Payment Batch / CSV:</label>
+                <button class="upload-btn" onclick="document.getElementById('excel_file').click()">📁 UPLOAD FILE CSV/EXCEL</button>
                 <input type="file" id="excel_file" style="display:none" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event)">
             </div>
         </div>
         <div class="summary-badge">
-            <small>GRAND TOTAL AMOUNT (EXACT)</small>
+            <small>GRAND TOTAL AMOUNT</small>
             <span id="grandTotalDisplay">IDR 0</span>
         </div>
     </div>
 
-    <div class="input-grid">
+    <div class="input-grid" id="manualInputArea">
         <div class="input-group">
             <label>1. Receiver Name</label>
             <textarea id="in_name" oninput="generateTable()"></textarea>
         </div>
         <div class="input-group non-bca-field hidden">
             <label>2. Receiver Bank Name</label>
-            <textarea id="in_bank_name" oninput="generateTable()" placeholder="e.g. Mandiri, BRI, BNI"></textarea>
+            <textarea id="in_bank_name" oninput="generateTable()" placeholder="Mandiri, BRI, BNI"></textarea>
         </div>
         <div class="input-group">
             <label id="rekLabel">2. Account (Rekening)</label>
@@ -97,17 +99,17 @@
             <textarea id="in_amt" oninput="generateTable()"></textarea>
         </div>
         <div class="input-group">
-            <label id="remarkLabel">4. Remark (Manual)</label>
-            <textarea id="in_remark" oninput="generateTable()" placeholder="Ketik remark manual di sini"></textarea>
+            <label id="remarkLabel">4. Remark 1 (Manual/Invoice)</label>
+            <textarea id="in_remark" oninput="generateTable()"></textarea>
         </div>
         <div class="input-group">
-            <label>5. Beneficiary Email (Manual)</label>
-            <textarea id="in_email" oninput="generateTable()" placeholder="Ketik email manual di sini"></textarea>
+            <label>5. Beneficiary Email / Remark 2</label>
+            <textarea id="in_email" oninput="generateTable()"></textarea>
         </div>
     </div>
 
     <div class="actions">
-        <button class="main-btn btn-copy" onclick="copyDataOnly()">SALIN DATA (ISI SAJA)</button>
+        <button class="main-btn btn-copy" onclick="copyDataOnly()">SALIN DATA (COPAS READY)</button>
         <button class="main-btn btn-reset" onclick="resetAll()">RESET SEMUA</button>
         <div id="status" style="font-weight:bold; color:var(--active-color)">0 Transaksi Terdeteksi</div>
     </div>
@@ -156,12 +158,19 @@
             root.style.setProperty('--active-color', '#005696');
             document.getElementById('modeTitle').innerText = "BCA Bulk Formatter - Sesama BCA";
             document.querySelectorAll('.non-bca-field').forEach(f => f.classList.add('hidden'));
+            document.getElementById('manualInputArea').style.display = 'grid';
             document.getElementById('transferTypeContainer').style.display = 'none';
-        } else {
+        } else if(mode === 'NONBCA') {
             root.style.setProperty('--active-color', '#c0392b');
             document.getElementById('modeTitle').innerText = "BCA Bulk Formatter - Antar Bank (Non-BCA)";
             document.querySelectorAll('.non-bca-field').forEach(f => f.classList.remove('hidden'));
+            document.getElementById('manualInputArea').style.display = 'grid';
             document.getElementById('transferTypeContainer').style.display = 'block';
+        } else {
+            root.style.setProperty('--active-color', '#6f42c1');
+            document.getElementById('modeTitle').innerText = "Auto Convert: Payment Batch to MT100";
+            document.getElementById('manualInputArea').style.display = 'none';
+            document.getElementById('transferTypeContainer').style.display = 'none';
         }
         generateTable();
     }
@@ -177,41 +186,51 @@
             const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
 
             uploadedData = [];
-            for(let i = 8; i < jsonData.length; i++) {
+            // Deteksi baris mulai data (biasanya baris ke-9)
+            let startIdx = jsonData.findIndex(row => row[0] == "1");
+            if (startIdx === -1) startIdx = 8; // Default jika tidak terdeteksi
+
+            for(let i = startIdx; i < jsonData.length; i++) {
                 const row = jsonData[i];
                 if(!row || !row[1]) continue; 
 
-                const accNo = (row[3] || "").toString().replace(/[^0-9]/g, '');
-                
-                // EXACT DECIMAL LOGIC
-                let rawVal = parseFloat(row[4]) || 0;
-                let finalVal = parseFloat(rawVal.toFixed(2)); 
+                // Parsing kolom "Destination Bank" (format: Bank - Rek - Nama)
+                const destInfo = (row[3] || "").toString();
+                const parts = destInfo.split(" - ");
+                const bankName = parts[0] || "";
+                const accNo = parts[1] || "";
+                const beneficiaryName = parts[2] || row[2]; // Vendor as fallback
 
                 uploadedData.push({
-                    name: (row[2] || "").toString(),
-                    rek: accNo,
-                    amt: finalVal,
-                    excelInvoice: (row[1] || "").toString(),
-                    bankName: "",
-                    // Email akan diambil dari input manual di generateTable
-                    email: ""
+                    name: beneficiaryName.toString().trim(),
+                    rek: accNo.toString().trim(),
+                    amt: parseFloat(row[4]) || 0,
+                    invoice: (row[1] || "").toString().trim(),
+                    bank: bankName.toString().trim(),
+                    vendor: (row[2] || "").toString().trim()
                 });
             }
-            // Kosongkan input manual KECUALI Remark dan Email agar bisa diisi manual
-            ['in_name','in_rek','in_amt','in_bank_name'].forEach(id => document.getElementById(id).value = "");
             generateTable();
             event.target.value = '';
         };
         reader.readAsArrayBuffer(file);
     }
 
+    function formatDateMT100(dateStr) {
+        if(!dateStr) return "";
+        const parts = dateStr.split('/');
+        if(parts.length < 3) return dateStr;
+        const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        return `${parseInt(parts[0])} ${months[parseInt(parts[1])-1]} ${parts[2]}`;
+    }
+
     function detectSwiftCode(bankName) {
         if (!bankName) return "";
-        const cleanName = bankName.toUpperCase().trim();
+        const cleanName = bankName.toUpperCase();
         for (let key in SWIFT_CODES) {
             if (cleanName.includes(key)) return SWIFT_CODES[key];
         }
-        return ""; 
+        return "BANK-LAIN"; 
     }
 
     function generateTable() {
@@ -219,50 +238,42 @@
         tbody.innerHTML = "";
         
         let finalData = [];
-        const manualRemarks = document.getElementById('in_remark').value.split('\n');
-        const manualEmails = document.getElementById('in_email').value.split('\n');
+        const effDateRaw = document.getElementById('custom_date').value;
+        const displayDate = currentMode === 'CONVERT' ? formatDateMT100(effDateRaw) : effDateRaw;
 
-        if (uploadedData.length > 0) {
-            finalData = uploadedData.map((item, index) => {
-                const manualRem = (manualRemarks[index] || "").trim();
-                const manualMail = (manualEmails[index] || "").trim();
-                return {
-                    ...item,
-                    rem1: manualRem.substring(0, 18),
-                    rem2: item.excelInvoice.substring(0, 18),
-                    email: manualMail // Prioritaskan input manual untuk email
-                };
-            });
+        if (currentMode === 'CONVERT' && uploadedData.length > 0) {
+            finalData = uploadedData.map(item => ({
+                ...item,
+                type: item.bank.toUpperCase().includes("BCA") ? "BCA" : "BIF",
+                swift: item.bank.toUpperCase().includes("BCA") ? "CENAIDJA" : detectSwiftCode(item.bank),
+                rem1: item.invoice,
+                rem2: item.vendor
+            }));
         } else {
             const names = document.getElementById('in_name').value.split('\n');
             const reks = document.getElementById('in_rek').value.split('\n');
             const amts = document.getElementById('in_amt').value.split('\n');
             const banks = document.getElementById('in_bank_name').value.split('\n');
+            const rems = document.getElementById('in_remark').value.split('\n');
+            const mails = document.getElementById('in_email').value.split('\n');
             
             const maxRows = Math.max(names.length, reks.length, amts.length);
             for (let i = 0; i < maxRows; i++) {
                 if (!names[i] && !reks[i]) continue;
-                const fullRemark = (manualRemarks[i] || "").trim();
-                
-                let rawVal = parseFloat((amts[i] || "0").toString().replace(/[^0-9.]/g, '')) || 0;
-                let finalVal = parseFloat(rawVal.toFixed(2));
-
                 finalData.push({
                     name: (names[i] || "").trim(),
                     rek: (reks[i] || "").trim(),
-                    amt: finalVal,
-                    rem1: fullRemark.substring(0, 18),
-                    rem2: fullRemark.substring(18, 36),
-                    bankName: (banks[i] || "").trim(),
-                    email: (manualEmails[i] || "").trim()
+                    amt: parseFloat((amts[i] || "0").replace(/[^0-9.]/g, '')) || 0,
+                    bank: (banks[i] || "").trim(),
+                    rem1: (rems[i] || "").trim(),
+                    vendor: (mails[i] || "").trim(),
+                    type: currentMode === 'BCA' ? 'BCA' : document.getElementById('def_type').value,
+                    swift: currentMode === 'BCA' ? "CENAIDJA" : detectSwiftCode(banks[i] || "")
                 });
             }
         }
 
         const masterId = document.getElementById('master_txid').value.trim();
-        const effDate = document.getElementById('custom_date').value.trim();
-        const defType = currentMode === 'BCA' ? 'BCA' : document.getElementById('def_type').value;
-        
         let prefix = "TX-"; let startNum = 1;
         if (masterId.includes('-')) {
             const parts = masterId.split('-');
@@ -275,24 +286,19 @@
             const currentTxId = `${prefix}${String(startNum + index).padStart(2, '0')}`;
             totalAmount += item.amt;
 
-            const autoSwift = currentMode === 'BCA' ? "" : detectSwiftCode(item.bankName);
-
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${index + 1}</td><td>${currentTxId}</td><td>${defType}</td>
+                <td>${index + 1}</td><td>${currentTxId}</td><td>${item.type}</td>
                 <td>5995333390</td><td></td><td>${item.rek}</td>
-                <td>${item.amt}</td><td>${effDate}</td><td></td><td>IDR</td><td>OUR</td>
-                <td>5995333390</td>
-                <td>${item.rem1}</td>
-                <td>${item.rem2}</td>
-                <td>${autoSwift}</td><td>${item.bankName.toUpperCase()}</td>
-                <td>${item.name.toUpperCase()}</td>
-                <td></td><td></td><td></td><td>${item.email}</td>
+                <td>${item.amt.toFixed(2)}</td><td>${displayDate}</td><td></td><td>IDR</td><td>OUR</td>
+                <td>5995333390</td><td>${item.rem1}</td><td>${item.rem2}</td>
+                <td>${item.swift}</td><td>${item.bank.toUpperCase()}</td>
+                <td>${item.name.toUpperCase()}</td><td>1</td><td>1</td><td>78</td><td></td>
             `;
             tbody.appendChild(tr);
         });
 
-        document.getElementById('grandTotalDisplay').innerText = "IDR " + totalAmount.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('grandTotalDisplay').innerText = "IDR " + totalAmount.toLocaleString('id-ID', { minimumFractionDigits: 2 });
         document.getElementById('status').innerText = `${finalData.length} Transaksi Terdeteksi`;
     }
 
@@ -304,7 +310,7 @@
         window.getSelection().removeAllRanges();
         window.getSelection().addRange(range);
         document.execCommand('copy');
-        alert("Data berhasil disalin!");
+        alert("Data MT100 berhasil disalin! Silakan paste ke Excel/CSV.");
         window.getSelection().removeAllRanges();
     }
 
